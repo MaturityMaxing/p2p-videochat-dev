@@ -1,8 +1,358 @@
+// polyfill for older browsers such as safari on outdate ios
+import 'react-app-polyfill/ie11'
+import 'react-app-polyfill/stable'
+import 'adapterjs'
+import 'webrtc-adapter'
+
+import { configure, makeAutoObservable } from 'mobx'
+import { observer } from 'mobx-react-lite'
+import pokemon from 'pokemon'
+import { useEffect, useRef } from 'react'
 import { createRoot } from 'react-dom/client'
+import { toast, ToastContainer } from 'react-toastify'
+import { io, Socket } from 'socket.io-client'
 
 import './index.scss'
 
-import { App } from './App'
+import type { ClientToServerEvents, ServerToClientEvents } from '../../server'
+
+configure({ enforceActions: 'never' })
+
+// declare typescript polyfill for older browser such as safari on outdate ios
+declare global {
+  interface RTCStreamEvent {
+    stream: MediaStream
+  }
+  interface RTCPeerConnection {
+    addStream?: (stream: MediaStream) => void
+    onaddstream?: (e: RTCStreamEvent) => void
+  }
+}
+
+/** ----------------------------------------------------------------------------
+ * data that affect the UI we put it in state
+ */
+
+class State {
+  constructor() {
+    makeAutoObservable(this)
+  }
+  status:
+    | 'idle'
+    | 'webcam-loading'
+    | 'webcam-error'
+    | 'ws-loading'
+    | 'ready-to-queue'
+    | 'in-queue'
+    | 'webrtc-loading'
+    | 'success' = 'idle'
+  localName = pokemon.random()
+  localStream?: MediaStream
+  remoteName = ''
+  remoteStream?: MediaStream
+}
+const state = new State()
+
+const cleanupLocal = (keepName?: boolean) => {
+  if (!keepName) {
+    state.localName = pokemon.random()
+  }
+  if (cleanupWebcamListeners) {
+    cleanupWebcamListeners()
+    cleanupWebcamListeners = undefined
+  }
+  if (state.localStream) {
+    state.localStream.getTracks().forEach(t => t.stop())
+    state.localStream = undefined
+  }
+}
+const cleanupRemote = () => {
+  state.remoteName = ''
+  if (state.remoteStream) {
+    state.remoteStream.getTracks().forEach(t => t.stop())
+    state.remoteStream = undefined
+  }
+}
+
+/** ----------------------------------------------------------------------------
+ * data that not affect the UI, we declare as static variables here
+ */
+type MySocket = Socket<ServerToClientEvents, ClientToServerEvents>
+
+let ws: MySocket | undefined = undefined
+const cleanupWs = () => {
+  if (!ws) {
+    return
+  }
+  ws.removeAllListeners()
+  ws.disconnect()
+  ws = undefined
+}
+
+let peer: RTCPeerConnection | undefined = undefined
+const cleanupPeer = () => {
+  if (!peer) {
+    return
+  }
+  peer.onicecandidate = null
+  peer.onicecandidateerror = null
+  peer.ontrack = null
+  peer.close()
+  peer = undefined
+}
+
+/** ----------------------------------------------------------------------------
+ * event handlers and logic
+ */
+
+let cleanupWebcamListeners: Function | undefined = undefined
+
+const openWebcam = () => {
+  console.log('openWebcam')
+  state.status = 'webcam-loading'
+  navigator.mediaDevices
+    .getUserMedia({ audio: true, video: true })
+    .then(stream => {
+      state.localStream = stream
+      startWs()
+      const tracks = stream.getTracks()
+      const onTrackEnd = () => {
+        if (state.status === 'idle') {
+          return
+        }
+        reset(true)
+        toast.error('Webcam stopped')
+      }
+      tracks.forEach(t => t.addEventListener('ended', onTrackEnd))
+      cleanupWebcamListeners?.()
+      cleanupWebcamListeners = () => {
+        tracks.forEach(t => t.removeEventListener('ended', onTrackEnd))
+      }
+    })
+    .catch(() => {
+      state.status = 'webcam-error'
+      toast.error('Failed to access webcam')
+    })
+}
+
+const startWs = () => {
+  console.log('startWs')
+  cleanupWs()
+  state.status = 'ws-loading'
+  ws = process.env.NODE_ENV === 'production' ? io() : io('localhost:4000')
+  ws.emit('setInfo', {
+    name: state.localName,
+    // you can send other information, like to authenticate/authorize or user related data here
+  })
+  ws.on('setInfoSuccess', d => {
+    if (d.serverSocketId !== ws?.id) {
+      console.error(
+        'server socket id not same with client socket id, this should not happen',
+      )
+    }
+    state.status = 'ready-to-queue'
+  })
+  ws.on('match', onWsMatch)
+  ws.on('offer', onWsOffer)
+  ws.on('answer', onWsAnswer)
+  ws.on('icecandidate', onWsIceCandidate)
+  ws.on('leave', onWsLeave)
+  ws.on('disconnect', () => {
+    reset(true)
+    toast.error('Network error')
+  })
+}
+const onWsMatch = (d: {
+  roomId: string
+  remoteName: string
+  createOffer?: boolean
+}) => {
+  console.log('onWsMatch')
+  state.remoteName = d.remoteName
+  state.status = 'webrtc-loading'
+  toast.success(`Matched with ${d.remoteName}`)
+  if (!d.createOffer) {
+    return
+  }
+  createPeerConnection()
+}
+const onWsOffer = (sdp: RTCSessionDescriptionInit) => {
+  console.log('onWsOffer')
+  createPeerConnection(sdp)
+}
+const onWsAnswer = (sdp: RTCSessionDescriptionInit) => {
+  console.log('onWsAnswer')
+  peer?.setRemoteDescription(new RTCSessionDescription(sdp))
+}
+const onWsIceCandidate = (candidate: RTCIceCandidate | null) => {
+  console.log('onWsIceCandidate')
+  if (candidate) {
+    peer?.addIceCandidate(new RTCIceCandidate(candidate))
+    return
+  }
+  try {
+    // IE compatible
+    var ua = window.navigator.userAgent
+    if (ua.indexOf('Edge') > -1 || /edg/i.test(ua)) {
+      peer?.addIceCandidate(null as any)
+    }
+  } catch (err) {}
+}
+const onWsLeave = (d: { remoteId: string; isTimeout?: boolean }) => {
+  console.log('onWsLeave')
+  if (d.remoteId === ws?.id) {
+    return
+  }
+  const reason = d.isTimeout ? 'disconnected' : 'left'
+  toast.info(`${state.remoteName} ${reason}`)
+  // this handler will be called whenever if the other participant left
+  // we also need to emit to the server to leave the current room and back to queue
+  ws?.emit('leave')
+  state.status = 'in-queue'
+  cleanupPeer()
+  cleanupRemote()
+}
+
+const createPeerConnection = async (offerSdp?: RTCSessionDescriptionInit) => {
+  console.log('createPeerConnection')
+  cleanupPeer()
+  peer = new RTCPeerConnection({
+    iceServers: [
+      {
+        urls: ['stun:stun.l.google.com:19302'],
+      },
+      {
+        urls: ['turn:18.222.215.140:3478', 'turn:18.222.215.140:3479'],
+        username: 'USERNAME',
+        credential: 'PASSWORD',
+      },
+    ],
+  })
+  peer.onicecandidate = onPeerIceCandidate
+  if (peer.addStream) {
+    peer.onaddstream = onPeerStream
+    if (state.localStream) {
+      peer.addStream(state.localStream)
+    }
+  } else {
+    peer.ontrack = onPeerTrack
+    state.localStream?.getTracks().forEach(t => peer?.addTrack(t))
+  }
+  if (!offerSdp) {
+    const localSdp = await peer.createOffer()
+    peer.setLocalDescription(localSdp)
+    ws?.emit('offer', localSdp)
+    return
+  }
+  peer.setRemoteDescription(new RTCSessionDescription(offerSdp))
+  const localSdp = await peer.createAnswer()
+  peer.setLocalDescription(localSdp)
+  ws?.emit('answer', localSdp)
+}
+const onPeerIceCandidate = (e: RTCPeerConnectionIceEvent) => {
+  console.log('onPeerIceCandidate')
+  ws?.emit('icecandidate', e.candidate)
+}
+const onPeerStream = (e: RTCStreamEvent) => {
+  console.log('onPeerStream')
+  state.remoteStream = e.stream
+  state.status = 'success'
+}
+const onPeerTrack = (e: RTCTrackEvent) => {
+  console.log('onPeerTrack')
+  if (!state.remoteStream) {
+    state.remoteStream = new MediaStream()
+  }
+  state.remoteStream.addTrack(e.track)
+  state.status = 'success'
+}
+
+const joinQueue = () => {
+  console.log('joinQueue')
+  ws?.emit('queue')
+  state.status = 'in-queue'
+}
+const leaveQueue = () => {
+  console.log('leaveQueue')
+  ws?.emit('unqueue')
+  state.status = 'ready-to-queue'
+}
+const next = () => {
+  console.log('next')
+  cleanupPeer()
+  cleanupRemote()
+  ws?.emit('leave')
+  state.status = 'in-queue'
+}
+
+const reset = (keepName?: boolean) => {
+  console.log('reset')
+  cleanupWs()
+  cleanupPeer()
+  cleanupLocal(keepName)
+  cleanupRemote()
+  state.status = 'idle'
+}
+
+export const App = observer(() => {
+  const { status, localName, localStream, remoteName, remoteStream } = state
+  return (
+    <>
+      <ToastContainer newestOnTop pauseOnFocusLoss={false} />
+      <div className='local'>
+        {localStream && <Video muted stream={localStream} />}
+        {(status === 'idle' || status === 'webcam-error') && (
+          <div className='action button' onClick={openWebcam}>
+            Open Webcam
+          </div>
+        )}
+        {status === 'ready-to-queue' && (
+          <div className='action button' onClick={joinQueue}>
+            Join Queue
+          </div>
+        )}
+        {status === 'in-queue' && (
+          <div className='action button' onClick={leaveQueue}>
+            Leave Queue
+          </div>
+        )}
+        {status === 'webrtc-loading' ||
+          (status === 'success' && (
+            <div className='action button' onClick={next}>
+              Next
+            </div>
+          ))}
+        <div className='status button' onClick={() => reset()}>
+          {localName} | {status}
+        </div>
+      </div>
+      <div className='remote'>
+        {remoteStream && <Video stream={remoteStream} />}
+        {status === 'in-queue' ? (
+          <div className='status button'>Waiting for participant...</div>
+        ) : remoteName ? (
+          <div className='status button'>
+            {remoteName}
+            {status !== 'success' ? ' | Connecting...' : ''}
+          </div>
+        ) : null}
+      </div>
+      <div className='version button'>vender v0.0.11</div>
+    </>
+  )
+})
+
+const Video = (p: { stream: MediaStream; muted?: boolean }) => {
+  const r = useRef<HTMLVideoElement | null>(null)
+  useEffect(() => {
+    if (!p.stream || !r.current) {
+      return
+    }
+    r.current.srcObject = p.stream
+    r.current.play()
+  }, [p.stream])
+  return <video ref={r} autoPlay playsInline controls={false} muted={p.muted} />
+}
 
 const div = document.getElementById('root') as HTMLDivElement
 createRoot(div).render(<App />)

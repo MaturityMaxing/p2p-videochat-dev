@@ -64,24 +64,8 @@ export const config: ESLint.ConfigData = {
     '@typescript-eslint/no-unused-vars': [1, { args: 'none' }],
     'no-shadow': 0,
     '@typescript-eslint/no-shadow': 1,
-    // restrict imports
-    'no-restricted-imports': [
-      1,
-      {
-        patterns: [
-          // should not import from # library
-          // this should be configured in tsconfig.json paths
-          '*../#*',
-        ],
-      },
-    ],
     // must use named export
     'import/no-default-export': 1,
-    // file name must match with exports
-    'filename-export/match-named-export': [
-      0,
-      { casing: 'loose', stripextra: true },
-    ],
     // restrict css modules unused/undef class names
     'css-modules/no-unused-class': 1,
     'css-modules/no-undef-class': 1,
