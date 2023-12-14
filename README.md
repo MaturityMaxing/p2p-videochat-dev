@@ -1,11 +1,43 @@
-### Vender
+## Vender
 
-##### Install nodejs
+Welcome to vender.training development repository!
+
+#### Setup and deployment
+
+Below is a proof of concept how to set the project up and running on a Ubuntu instance. This can be modified to a better solution using docker and k8s in the future based on those commands.
+
+##### Install nginx and certbot
+
+```sh
+sudo apt-get -y install nginx
+
+# install certbot and get free ssl certificate
+sudo apt-get -y install certbot
+sudo service nginx stop
+sudo certbot certonly --standalone -d vender.training
+sudo service nginx start
+
+# install unzip to quickly upload zip and unzip on the cloud
+sudo apt-get -y install unzip
+
+# set permission to deploy on some dirs
+sudo chmod -R a+rwX /etc/letsencrypt
+sudo chmod -R a+rwX /etc/nginx
+sudo chmod -R a+rwX /var/www
+```
+
+##### Deploy frontend code and nginx config
+
+```sh
+bash scripts/deploy-react-app.sh
+```
+
+##### Install nodejs on
 
 ```sh
 # first follow instruction in this link to install nvm
 # https://github.com/nvm-sh/nvm
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
 
 # install nodejs v16.18.1
 # we can install newer versions, but need to test that version first on our local
@@ -22,8 +54,10 @@ npm i -g pnpm pm2
 sudo apt-get -y update
 sudo apt-get install coturn -y
 
-# start coturn using pm2
+# stop the default coturn service and start ours using pm2
+sudo service coturn stop
 pm2 start --name=turn "turnserver -a -v -n --no-dtls --no-tls -u USERNAME:PASSWORD -r 000"
+pm2 save
 
 # restart coturn if already started using pm2
 pm2 restart turn
@@ -34,14 +68,23 @@ pm2 restart turn
 ```sh
 # clone the repository if not yet
 cd /var/www
-git clone https://github.com/giveNZtake/Vender.git
+git clone https://github.com/giveNZtake/Vender.git vender_source_code
 
-# start the socket io server using pm2
-cd /var/www/Vender/server
+# install dependencies and start the socket io server using pm2
+cd /var/www/vender_source_code/server
+pnpm i
 pm2 start --name=vender .
+pm2 save
 
 # restart the socket io server if already started using pm2
 pm2 restart vender
+```
+
+##### Resurrect pm2 in case the server restarted
+
+```sh
+sudo service coturn stop
+pm2 resurrect
 ```
 
 ##### Debug and view log

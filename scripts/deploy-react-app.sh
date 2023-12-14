@@ -1,16 +1,16 @@
 pnpm i && \
-  scp server/nginx.conf vender-ec2:/etc/nginx/conf.d/vender.conf && \
-  ssh vender-ec2 "sudo service nginx restart" && \
+  scp server/nginx.conf vender.training:/etc/nginx/conf.d/vender.conf && \
+  ssh vender.training "sudo service nginx restart" && \
   cd react-app && \
   yarn build && \
-  mv build vender && \
-  zip -vr vender.zip vender && \
-  scp vender.zip vender-ec2:/var/www && \
-  rm -rf vender* && \
-  ssh vender-ec2 "
+  mv build vender_react_app && \
+  zip -vr vender_react_app.zip vender_react_app && \
+  scp vender_react_app.zip vender.training:/var/www && \
+  rm -rf vender_react_app* && \
+  ssh vender.training "
     cd /var/www &&
-    rm -rf vender &&
-    unzip vender.zip &&
-    rm -f vender.zip &&
+    rm -rf vender_react_app &&
+    unzip vender_react_app.zip &&
+    rm -f vender_react_app.zip &&
     sudo service nginx restart
   ";
