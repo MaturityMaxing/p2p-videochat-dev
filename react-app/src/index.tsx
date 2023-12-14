@@ -15,6 +15,7 @@ import { io, Socket } from 'socket.io-client'
 import './index.scss'
 
 import type { ClientToServerEvents, ServerToClientEvents } from '../../server'
+import noise from './assets/noise.mp3'
 
 configure({ enforceActions: 'never' })
 
@@ -65,6 +66,7 @@ const cleanupLocal = (keepName?: boolean) => {
     state.localStream.getTracks().forEach(t => t.stop())
     state.localStream = undefined
   }
+  cleanupPlayPermission?.()
 }
 const cleanupRemote = () => {
   state.remoteName = ''
@@ -110,6 +112,7 @@ let cleanupWebcamListeners: Function | undefined = undefined
 const openWebcam = () => {
   console.log('openWebcam')
   state.status = 'webcam-loading'
+  playPermissionOnUserInteract()
   navigator.mediaDevices
     .getUserMedia({ audio: true, video: true })
     .then(stream => {
@@ -129,10 +132,34 @@ const openWebcam = () => {
         tracks.forEach(t => t.removeEventListener('ended', onTrackEnd))
       }
     })
-    .catch(() => {
+    .catch((err: Error) => {
       state.status = 'webcam-error'
-      toast.error('Failed to access webcam')
+      const msg = err?.message || `${err}`
+      toast.error(`Failed to access webcam. Debug: ${msg}`)
     })
+}
+// to get audio video play permission over browser policy strict on user interaction
+// this could solve some case with black remote video if the user has a long time not interact?
+let cleanupPlayPermission: Function | undefined = undefined
+const playPermissionOnUserInteract = () => {
+  if (cleanupPlayPermission) {
+    return
+  }
+  const v = document.createElement('video')
+  v.classList.add('invisible')
+  v.loop = true
+  v.playsInline = true
+  v.volume = 0.01
+  v.src = noise
+  document.body.appendChild(v)
+  v.play()?.catch((err: Error) => {
+    const msg = err?.message || `${err}`
+    toast.error(`Debug: ${msg}`)
+  })
+  cleanupPlayPermission = () => {
+    document.body.removeChild(v)
+    cleanupPlayPermission = undefined
+  }
 }
 
 const startWs = () => {
@@ -157,9 +184,9 @@ const startWs = () => {
   ws.on('answer', onWsAnswer)
   ws.on('icecandidate', onWsIceCandidate)
   ws.on('leave', onWsLeave)
-  ws.on('disconnect', () => {
+  ws.on('disconnect', reason => {
     reset(true)
-    toast.error('Network error')
+    toast.error(`Network error. Debug: ${reason}`)
   })
 }
 const onWsMatch = (d: {
@@ -322,7 +349,7 @@ export const App = observer(() => {
               Next
             </div>
           ))}
-        <div className='status button' onClick={() => reset()}>
+        <div className='status button'>
           {localName} | {status}
         </div>
       </div>
@@ -337,7 +364,7 @@ export const App = observer(() => {
           </div>
         ) : null}
       </div>
-      <div className='version button'>vender v0.0.11</div>
+      <div className='version button'>vender v0.0.12</div>
     </>
   )
 })
@@ -345,13 +372,19 @@ export const App = observer(() => {
 const Video = (p: { stream: MediaStream; muted?: boolean }) => {
   const r = useRef<HTMLVideoElement | null>(null)
   useEffect(() => {
-    if (!p.stream || !r.current) {
+    const v = r.current
+    if (!p.stream || !v) {
       return
     }
-    r.current.srcObject = p.stream
-    r.current.play()
+    v.loop = true
+    v.playsInline = true
+    v.srcObject = p.stream
+    v.play()?.catch((err: Error) => {
+      const msg = err?.message || `${err}`
+      toast.error(`Debug: ${msg}`)
+    })
   }, [p.stream])
-  return <video ref={r} autoPlay playsInline controls={false} muted={p.muted} />
+  return <video ref={r} loop playsInline controls={false} muted={p.muted} />
 }
 
 const div = document.getElementById('root') as HTMLDivElement
