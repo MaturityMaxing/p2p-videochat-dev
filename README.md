@@ -128,3 +128,26 @@ receive event "match"
 -> stream added to the handler and display on the UI
 -> set connection status as success
 ```
+
+##### Configuration
+
+- Socket io interval and timeout: By default socket io library uses 25s for ping interval and 20s for ping timeout which mean it would take up to 45s to notify that the other participant has disconnected
+  - Default config: tested with result that there were disconnected peers still showing up and caused the other participant waited for too long to be notified
+  - v0.0.7 config 1s for both: tested with result that it was too easy to be disconnected
+  - v0.0.8 config 3s for ping interval and 4s for ping timeout: tested with better result
+  - v0.0.13 config 3s for ping interval and 15s for ping timeout, the state will be reset and websocket will automatically reconnect to the server on frontend side
+- Queue interval:
+  - Default config: 3s to run a match pairing check
+  - v0.0.13 config 1s for quicker match pairing check so the user wait less
+- Skip/next cache:
+  - To prevent the user meet the one they already skip/next, or either the other skip/next
+  - If the user disconnect or refresh the browser then the cache will be cleared since it is associated with the connection
+  - The cache will be cleared automatically in 60m
+  - To manually clear the cache, use ws event `forget`
+  - v0.0.13 if user click on the generated name, it will call the event and clear the cache. The frontend developer can choose to use the button or switch use timeout to call the event as desired
+
+##### Future improvements
+
+- Consider using a media server such as Mediasoup / Janus / Ant Media Server. The current source code is a raw peer to peer webrtc implementation which doesnt require a media server in exchange for a low server cost to get started as a proof of concept
+- Consider using a 3rd party turn service such as Twilio / Vonage OpenTok. The current turn server is a hard code session managed by pm2 on port 3478 3479. It should have tls with port 443 for the best out come as other 3rd party turn service will provide
+- Consider deployment with globalization which can help with gloval users, so for example we have our server running on 5 different locations: Canada, US, India, Europe, SEA. When the user connect to the system, it will choose the one nearest or strongest to that user

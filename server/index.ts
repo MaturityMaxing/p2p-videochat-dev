@@ -8,6 +8,7 @@ export type ClientToServerEvents = {
   queue: () => void
   unqueue: () => void
   leave: () => void
+  forget: () => void
 
   offer: (d: RTCSessionDescriptionInit) => void
   answer: (d: RTCSessionDescriptionInit) => void
@@ -49,8 +50,8 @@ const io = new Server(server, {
     origin: 'http://localhost:3000',
     methods: ['GET', 'POST'],
   },
-  pingInterval: 3000,
-  pingTimeout: 4000,
+  pingInterval: 5000,
+  pingTimeout: 15000,
 })
 io.on('connection', (s: MySocket) => {
   console.log(`on ws connection, id=${s.id} recovered=${s.recovered}`)
@@ -76,6 +77,9 @@ io.on('connection', (s: MySocket) => {
     setSkip(s)
     leaveRoom(s)
     addToQueue(s)
+  })
+  s.on('forget', () => {
+    delete s.data.skip
   })
   /** --------------------------------------------------------------------------
    * webrtc signaling events
@@ -126,7 +130,7 @@ const processQueue = () => {
     queue.unshift(s1)
   }
 }
-const processQueueInterval = 3000
+const processQueueInterval = 1000
 setInterval(processQueue, processQueueInterval)
 
 const pair = (s1: MySocket, s2: MySocket) => {
@@ -200,7 +204,7 @@ const getTheOtherInRoom = (s: MySocket) => {
   return rooms[s.data.roomId]?.find(_ => _ !== s)
 }
 
-const skipTimeout = 24 * 60 * 60 * 1000
+const skipTimeout = 60 * 60 * 1000
 const setSkip = (s: MySocket) => {
   const other = getTheOtherInRoom(s)
   if (!other) {

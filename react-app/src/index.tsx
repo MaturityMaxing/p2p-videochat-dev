@@ -162,7 +162,7 @@ const playPermissionOnUserInteract = () => {
   }
 }
 
-const startWs = () => {
+const startWs = (rejoinQueue?: boolean) => {
   console.log('startWs')
   cleanupWs()
   state.status = 'ws-loading'
@@ -177,7 +177,11 @@ const startWs = () => {
         'server socket id not same with client socket id, this should not happen',
       )
     }
-    state.status = 'ready-to-queue'
+    if (!rejoinQueue) {
+      state.status = 'ready-to-queue'
+    } else {
+      joinQueue()
+    }
   })
   ws.on('match', onWsMatch)
   ws.on('offer', onWsOffer)
@@ -185,8 +189,22 @@ const startWs = () => {
   ws.on('icecandidate', onWsIceCandidate)
   ws.on('leave', onWsLeave)
   ws.on('disconnect', reason => {
-    reset(true)
-    toast.error(`Network error. Debug: ${reason}`)
+    // automatically reconnect if webcam is running
+    const isWebcamRunning = cleanupWebcamListeners
+    const msg = isWebcamRunning ? 'Reconnecting...' : 'Network error.'
+    toast.error(`${msg} Debug: ${reason}`)
+    if (!isWebcamRunning) {
+      reset(true)
+      return
+    }
+    // automatically reconnect if webcam is running
+    const _rejoinQueue =
+      state.status === 'in-queue' ||
+      state.status === 'webrtc-loading' ||
+      state.status === 'success'
+    cleanupPeer()
+    cleanupRemote()
+    startWs(_rejoinQueue)
   })
 }
 const onWsMatch = (d: {
@@ -311,6 +329,11 @@ const next = () => {
   ws?.emit('leave')
   state.status = 'in-queue'
 }
+const forget = () => {
+  console.log('forget')
+  ws?.emit('forget')
+  toast.info('Removed skip/next cache')
+}
 
 const reset = (keepName?: boolean) => {
   console.log('reset')
@@ -349,7 +372,7 @@ export const App = observer(() => {
               Next
             </div>
           ))}
-        <div className='status button'>
+        <div className='status button' onClick={forget}>
           {localName} | {status}
         </div>
       </div>
@@ -364,7 +387,7 @@ export const App = observer(() => {
           </div>
         ) : null}
       </div>
-      <div className='version button'>vender v0.0.12</div>
+      <div className='version button'>vender v0.0.13</div>
     </>
   )
 })
