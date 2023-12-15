@@ -2,6 +2,13 @@ import http from 'http'
 import { integer, nodeCrypto } from 'random-js'
 import { Server, Socket } from 'socket.io'
 
+import {
+  processQueueInterval,
+  skipTimeout,
+  wsPingInterval,
+  wsPingTimeout,
+} from './config'
+
 export type ClientToServerEvents = {
   setInfo: (d: { name: string }) => void
 
@@ -50,8 +57,8 @@ const io = new Server(server, {
     origin: 'http://localhost:3000',
     methods: ['GET', 'POST'],
   },
-  pingInterval: 5000,
-  pingTimeout: 15000,
+  pingInterval: wsPingInterval,
+  pingTimeout: wsPingTimeout,
 })
 io.on('connection', (s: MySocket) => {
   console.log(`on ws connection, id=${s.id} recovered=${s.recovered}`)
@@ -130,7 +137,6 @@ const processQueue = () => {
     queue.unshift(s1)
   }
 }
-const processQueueInterval = 1000
 setInterval(processQueue, processQueueInterval)
 
 const pair = (s1: MySocket, s2: MySocket) => {
@@ -204,7 +210,6 @@ const getTheOtherInRoom = (s: MySocket) => {
   return rooms[s.data.roomId]?.find(_ => _ !== s)
 }
 
-const skipTimeout = 60 * 60 * 1000
 const setSkip = (s: MySocket) => {
   const other = getTheOtherInRoom(s)
   if (!other) {
