@@ -6,6 +6,8 @@ Welcome to vender.training development repository!
 
 Below is a proof of concept how to set the project up and running on a Ubuntu instance. This can be modified to a better solution using docker and k8s in the future based on those commands.
 
+Ports to be opened: 22 for ssh, 80 for http (will be redirect to https), 443 for https, 3478 and 3479 for turn
+
 ##### Install nginx and certbot
 
 ```sh
