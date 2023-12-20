@@ -66,7 +66,6 @@ const cleanupLocal = (keepName?: boolean) => {
     state.localStream.getTracks().forEach(t => t.stop())
     state.localStream = undefined
   }
-  cleanupPlayPermission?.()
 }
 const cleanupRemote = () => {
   state.remoteName = ''
@@ -140,11 +139,7 @@ const openWebcam = () => {
 }
 // to get audio video play permission over browser policy strict on user interaction
 // this could solve some case with black remote video if the user has a long time not interact?
-let cleanupPlayPermission: Function | undefined = undefined
 const playPermissionOnUserInteract = () => {
-  if (cleanupPlayPermission) {
-    return
-  }
   const v = document.createElement('video')
   v.classList.add('invisible')
   v.loop = true
@@ -156,10 +151,7 @@ const playPermissionOnUserInteract = () => {
     const msg = err?.message || `${err}`
     toast.error(`Debug: ${msg}`)
   })
-  cleanupPlayPermission = () => {
-    document.body.removeChild(v)
-    cleanupPlayPermission = undefined
-  }
+  setTimeout(() => document.body.removeChild(v), 1000)
 }
 
 const startWs = (rejoinQueue?: boolean) => {
@@ -387,7 +379,7 @@ export const App = observer(() => {
           </div>
         ) : null}
       </div>
-      <div className='version button'>vender v0.0.13</div>
+      <div className='version button'>vender v0.0.14</div>
     </>
   )
 })
