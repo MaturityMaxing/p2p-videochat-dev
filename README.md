@@ -31,7 +31,13 @@ sudo chmod -R a+rwX /var/www
 ##### Deploy frontend code and nginx config
 
 ```sh
+# run this command on our local development computer
+# this will build the frontend code, then copy to the ec2 instance through ssh
+# we can also build the frontend code on the server, but it will consume a lot of cpu/memory
 bash scripts/deploy-react-app.sh
+
+# when we really need to build the frontend code on the server
+# we need to look at the scripts and rewrite it into another version instead
 ```
 
 ##### Install nodejs on
