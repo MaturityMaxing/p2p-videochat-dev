@@ -17,7 +17,7 @@ zip -qr vender_react_app.zip vender_react_app
 echo "🚢 Deploying to server..."
 scp -q vender_react_app.zip "$REMOTE":/var/www
 ssh "$REMOTE" "
-  cd $APP_DIR && git pull && cd server && pnpm i && pm2 restart vender || \
+  cd $APP_DIR && git pull origin main && cd server && pnpm i && pm2 restart vender || \
   { pm2 start index.js --name vender; pm2 save; }
   cd /var/www && rm -rf vender_react_app && unzip -q vender_react_app.zip && rm vender_react_app.zip
   systemctl restart nginx
