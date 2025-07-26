@@ -54,7 +54,7 @@ type MySocket = Socket<
 const server = http.createServer()
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:3000',
+    origin: ['https://maturitymaxing.xyz', 'https://www.maturitymaxing.xyz'],
     methods: ['GET', 'POST'],
   },
   pingInterval: wsPingInterval,

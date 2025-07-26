@@ -259,9 +259,9 @@ const createPeerConnection = async (offerSdp?: RTCSessionDescriptionInit) => {
         urls: ['stun:stun.l.google.com:19302'],
       },
       {
-        urls: ['turn:18.222.215.140:3478', 'turn:18.222.215.140:3479'],
-        username: 'USERNAME',
-        credential: 'PASSWORD',
+        urls: ['turn:128.199.120.243:3478', 'turn:128.199.120.243:3479'],
+        username: 'turnuser',
+        credential: 'turnpass',
       },
     ],
   })
