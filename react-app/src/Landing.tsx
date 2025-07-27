@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from 'react'
 import './Landing.scss'
 
+import { DatabaseUser } from './supabase'
+
 interface LandingProps {
   onStartMaturing: () => void
   onSignIn: () => void
+  onSignOut: () => void
+  user: DatabaseUser | null
 }
 
-const Landing: React.FC<LandingProps> = ({ onStartMaturing, onSignIn }) => {
+const Landing: React.FC<LandingProps> = ({ onStartMaturing, onSignIn, onSignOut, user }) => {
   const [currentTextIndex, setCurrentTextIndex] = useState(0)
   
   const rotatingTexts = [
@@ -43,9 +47,15 @@ const Landing: React.FC<LandingProps> = ({ onStartMaturing, onSignIn }) => {
           </div>
         </div>
         
-        <button className="signin-btn" onClick={onSignIn}>
-          Sign In
-        </button>
+        {user ? (
+          <button className="signin-btn" onClick={onSignOut}>
+            Sign Out ({user.email})
+          </button>
+        ) : (
+          <button className="signin-btn" onClick={onSignIn}>
+            Sign In
+          </button>
+        )}
       </div>
     </div>
   )

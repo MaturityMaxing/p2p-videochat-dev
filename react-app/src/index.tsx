@@ -347,11 +347,14 @@ const reset = (keepName?: boolean) => {
   state.status = 'idle'
 }
 
+
+
 interface DashboardProps {
   user: DatabaseUser | null
+  onBackToLanding: () => void
 }
 
-export const Dashboard = observer(({ user }: DashboardProps) => {
+export const Dashboard = observer(({ user, onBackToLanding }: DashboardProps) => {
   // Set current user in global state for use by websocket functions
   state.currentUser = user
   
@@ -364,6 +367,12 @@ export const Dashboard = observer(({ user }: DashboardProps) => {
   const handleSignOut = async () => {
     console.log('🔍 [AUTH DEBUG] Sign out clicked')
     await supabase.auth.signOut()
+  }
+  
+  // Back to landing function
+  const handleBackToLanding = () => {
+    console.log('🔍 [AUTH DEBUG] Back to landing clicked')
+    onBackToLanding()
   }
   return (
     <>
@@ -391,6 +400,9 @@ export const Dashboard = observer(({ user }: DashboardProps) => {
               Next
             </div>
           ))}
+        <div className='back-to-landing button' onClick={handleBackToLanding}>
+          ← Landing
+        </div>
         <div className='status button' onClick={forget}>
           {displayName} | {status}
         </div>
@@ -546,6 +558,11 @@ const App = observer(() => {
     console.log('🔍 [AUTH DEBUG] handleStartMaturing clicked, switching to dashboard')
     setCurrentView('dashboard')
   }
+  
+  const handleBackToLanding = () => {
+    console.log('🔍 [AUTH DEBUG] Back to landing from dashboard')
+    setCurrentView('landing')
+  }
 
   const handleSignIn = () => {
     setIsSignInModalOpen(true)
@@ -554,6 +571,11 @@ const App = observer(() => {
   const handleSignInSuccess = () => {
     setIsSignInModalOpen(false)
     // User state will be updated by the auth state change listener
+  }
+  
+  const handleSignOutFromLanding = async () => {
+    console.log('🔍 [AUTH DEBUG] Sign out from landing clicked')
+    await supabase.auth.signOut()
   }
 
   console.log('🔍 [AUTH DEBUG] Render state:', { 
@@ -585,9 +607,11 @@ const App = observer(() => {
         <Landing 
           onStartMaturing={handleStartMaturing}
           onSignIn={handleSignIn}
+          onSignOut={handleSignOutFromLanding}
+          user={user}
         />
       ) : (
-        <Dashboard user={user} />
+        <Dashboard user={user} onBackToLanding={handleBackToLanding} />
       )}
       
       <SignInModal
