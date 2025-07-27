@@ -13,6 +13,7 @@ import { toast, ToastContainer } from 'react-toastify'
 import { io, Socket } from 'socket.io-client'
 
 import './index.scss'
+import './Dashboard.scss'
 
 import type { ClientToServerEvents, ServerToClientEvents } from '../../server'
 import noise from './assets/noise.mp3'
@@ -406,56 +407,82 @@ export const Dashboard = observer(({ user, onBackToLanding }: DashboardProps) =>
     console.log('🔍 [AUTH DEBUG] Back to landing clicked')
     onBackToLanding()
   }
+  
+  // Member CTA handler
+  const handleMemberCTA = () => {
+    console.log('🔍 [MEMBER] Become a Member clicked')
+    // TODO: Implement Stripe/crypto payment flow
+    alert('Member signup coming soon! ($20)')
+  }
   return (
     <>
       <ToastContainer newestOnTop pauseOnFocusLoss={false} />
+      
+      {/* CRITICAL: Keep video containers exactly as they are */}
       <div className='local'>
         {localStream && <Video muted stream={localStream} />}
-        {(status === 'idle' || status === 'webcam-error') && (
-          <div className='action button' onClick={openWebcam}>
-            Open Webcam
-          </div>
-        )}
-        {status === 'ready-to-queue' && (
-          <div className='action button' onClick={joinQueue}>
-            Join Queue
-          </div>
-        )}
-        {status === 'in-queue' && (
-          <div className='action button' onClick={leaveQueue}>
-            Leave Queue
-          </div>
-        )}
-        {status === 'webrtc-loading' ||
-          (status === 'success' && (
-            <div className='action button' onClick={next}>
-              Next
+        <div className='dashboard-overlay'>
+          {(status === 'idle' || status === 'webcam-error') && (
+            <div className='action button' onClick={openWebcam}>
+              Open Webcam
             </div>
-          ))}
-        <div className='back-to-landing button' onClick={handleBackToLanding}>
-          ← Landing
-        </div>
-        <div className='status button' onClick={forget}>
-          {displayName} | {status}
-        </div>
-        {user && (
-          <div className='signout button' onClick={handleSignOut}>
-            Sign Out
+          )}
+          {status === 'ready-to-queue' && (
+            <div className='action button' onClick={joinQueue}>
+              Join Queue
+            </div>
+          )}
+          {status === 'in-queue' && (
+            <div className='action button' onClick={leaveQueue}>
+              Leave Queue
+            </div>
+          )}
+          {status === 'webrtc-loading' ||
+            (status === 'success' && (
+              <div className='action button' onClick={next}>
+                Next
+              </div>
+            ))}
+          <div className='back-to-landing button' onClick={handleBackToLanding}>
+            ← Landing
           </div>
-        )}
+          <div className='status button' onClick={forget}>
+            {displayName} | {status}
+          </div>
+          {user && (
+            <div className='signout button' onClick={handleSignOut}>
+              Sign Out
+            </div>
+          )}
+        </div>
       </div>
+      
       <div className='remote'>
         {remoteStream && <Video stream={remoteStream} />}
-        {status === 'in-queue' ? (
-          <div className='status button'>Waiting for participant...</div>
-        ) : remoteName ? (
-          <div className='status button'>
-            {remoteName}
-            {status !== 'success' ? ' | Connecting...' : ''}
-          </div>
-        ) : null}
+        <div className='dashboard-overlay'>
+          {status === 'in-queue' ? (
+            <div className='status button'>Waiting for participant...</div>
+          ) : remoteName ? (
+            <div className='status button'>
+              {remoteName}
+              {status !== 'success' ? ' | Connecting...' : ''}
+            </div>
+          ) : null}
+        </div>
       </div>
-      <div className='version button'>MaturityMaxing v1.0.0</div>
+      
+      <div className='dashboard-overlay'>
+        <div className='version button'>MaturityMaxing v1.0.0</div>
+      </div>
+      
+      {/* Member overlay - only show for non-members */}
+      {!user && (
+        <div className='member-overlay'>
+          <button className='member-cta' onClick={handleMemberCTA}>
+            Become a Member ($20)
+          </button>
+        </div>
+      )}
     </>
   )
 })
