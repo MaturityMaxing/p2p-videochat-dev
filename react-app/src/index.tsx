@@ -360,6 +360,7 @@ export const Dashboard = observer(({ user, onBackToLanding }: DashboardProps) =>
   state.currentUser = user
   
   const { status, localName, localStream, remoteName, remoteStream } = state
+  const [memberCTAClicked, setMemberCTAClicked] = useState(false)
   
   // Determine display name: email for logged-in users, Pokemon for non-members
   const displayName = user ? user.email : localName
@@ -410,9 +411,9 @@ export const Dashboard = observer(({ user, onBackToLanding }: DashboardProps) =>
   
   // Member CTA handler
   const handleMemberCTA = () => {
-    console.log('🔍 [MEMBER] Become a Member clicked')
+    console.log('🔍 [MEMBER] Start Mature Maxing clicked')
+    setMemberCTAClicked(true)
     // TODO: Implement Stripe/crypto payment flow
-    alert('Member signup coming soon! ($20)')
   }
   return (
     <>
@@ -469,20 +470,20 @@ export const Dashboard = observer(({ user, onBackToLanding }: DashboardProps) =>
             </div>
           ) : null}
         </div>
+        
+        {/* Member CTA - positioned in bottom right of beige section */}
+        {!user && (
+          <div className='member-overlay'>
+            <button className='member-cta' onClick={handleMemberCTA}>
+              {memberCTAClicked ? 'Coming soon' : 'Start Mature Maxing'}
+            </button>
+          </div>
+        )}
       </div>
       
       <div className='dashboard-overlay'>
         <div className='version button'>MaturityMaxing v1.0.0</div>
       </div>
-      
-      {/* Member overlay - only show for non-members */}
-      {!user && (
-        <div className='member-overlay'>
-          <button className='member-cta' onClick={handleMemberCTA}>
-            Become a Member ($20)
-          </button>
-        </div>
-      )}
     </>
   )
 })

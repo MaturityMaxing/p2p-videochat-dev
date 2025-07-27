@@ -83,12 +83,11 @@
   text-shadow: none;
 }
 
-/* Member overlay for non-members only */
+/* Member CTA positioned in bottom right of beige section */
 .member-overlay {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
   z-index: 100; /* Above everything but below modals */
   pointer-events: none;
 }
@@ -124,6 +123,11 @@
 
 /* Mobile responsiveness */
 @media (max-width: 768px) {
+  .member-overlay {
+    bottom: 15px;
+    right: 15px;
+  }
+  
   .member-cta {
     font-size: 1rem;
     padding: 12px 16px;
@@ -143,7 +147,8 @@
 
 @media (orientation: portrait) {
   .member-overlay {
-    top: 60%; /* Adjust position for portrait mode */
+    bottom: 15px;
+    right: 15px;
   }
   
   .member-cta {
