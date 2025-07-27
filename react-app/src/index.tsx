@@ -431,6 +431,8 @@ const App = observer(() => {
   const [authLoading, setAuthLoading] = useState(true)
 
   useEffect(() => {
+    let isInitialLoad = true
+    
     // Check initial auth state
     const checkAuth = async () => {
       console.log('🔍 [AUTH DEBUG] Starting checkAuth process...')
@@ -469,9 +471,9 @@ const App = observer(() => {
           }
           
           if (userData) {
-            console.log('🔍 [AUTH DEBUG] Setting user data and should redirect to dashboard')
+            console.log('🔍 [AUTH DEBUG] Setting user data and switching to dashboard')
             setUser(userData)
-            console.log('🔍 [AUTH DEBUG] Current view should change to dashboard, but currentView state is:', currentView)
+            setCurrentView('dashboard')
           } else {
             console.log('🔍 [AUTH DEBUG] No user data found in database')
           }
@@ -483,18 +485,26 @@ const App = observer(() => {
       } finally {
         console.log('🔍 [AUTH DEBUG] Setting authLoading to false')
         setAuthLoading(false)
+        isInitialLoad = false
       }
     }
 
     checkAuth()
 
-    // Listen for auth changes
+    // Listen for auth changes (but skip during initial load to prevent interference)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('🔍 [AUTH DEBUG] Auth state change:', { 
         event, 
         hasSession: !!session, 
-        userEmail: session?.user?.email 
+        userEmail: session?.user?.email,
+        isInitialLoad
       })
+      
+      // Skip auth state changes during initial load to prevent interference
+      if (isInitialLoad) {
+        console.log('🔍 [AUTH DEBUG] Skipping auth state change during initial load')
+        return
+      }
       
       if (event === 'SIGNED_IN' && session?.user?.email) {
         console.log('🔍 [AUTH DEBUG] Processing SIGNED_IN event')
