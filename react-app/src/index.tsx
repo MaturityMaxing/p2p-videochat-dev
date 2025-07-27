@@ -448,13 +448,8 @@ export const Dashboard = observer(({ user, onBackToLanding }: DashboardProps) =>
             ← Landing
           </div>
           <div className='status button' onClick={forget}>
-            {displayName} | {status}
+            {status}
           </div>
-          {user && (
-            <div className='signout button' onClick={handleSignOut}>
-              Sign Out
-            </div>
-          )}
         </div>
       </div>
       
