@@ -455,7 +455,7 @@ export const Dashboard = observer(({ user, onBackToLanding }: DashboardProps) =>
           </div>
         ) : null}
       </div>
-      <div className='version button'>vender v0.0.14</div>
+      <div className='version button'>MaturityMaxing v1.0.0</div>
     </>
   )
 })
