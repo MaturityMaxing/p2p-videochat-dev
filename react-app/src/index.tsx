@@ -365,8 +365,19 @@ export const Dashboard = observer(({ user, onBackToLanding }: DashboardProps) =>
   
   // Sign out function
   const handleSignOut = async () => {
-    console.log('🔍 [AUTH DEBUG] Sign out clicked')
-    await supabase.auth.signOut()
+    console.log('🔍 [AUTH DEBUG] Sign out from dashboard clicked')
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error('🔍 [AUTH DEBUG] Dashboard logout error:', error)
+      } else {
+        console.log('🔍 [AUTH DEBUG] Dashboard logout successful')
+        // Manually navigate to landing and clear state
+        onBackToLanding()
+      }
+    } catch (err) {
+      console.error('🔍 [AUTH DEBUG] Dashboard logout exception:', err)
+    }
   }
   
   // Back to landing function
@@ -523,9 +534,17 @@ const App = observer(() => {
         isInitialLoad
       })
       
-      // Skip auth state changes during initial load to prevent interference
+      // Always process SIGNED_OUT events (don't skip during initial load)
+      if (event === 'SIGNED_OUT') {
+        console.log('🔍 [AUTH DEBUG] Processing SIGNED_OUT event (always processed)')
+        setUser(null)
+        setCurrentView('landing')
+        return
+      }
+      
+      // Skip other auth state changes during initial load to prevent interference
       if (isInitialLoad) {
-        console.log('🔍 [AUTH DEBUG] Skipping auth state change during initial load')
+        console.log('🔍 [AUTH DEBUG] Skipping auth state change during initial load (not SIGNED_OUT)')
         return
       }
       
@@ -544,10 +563,6 @@ const App = observer(() => {
           setUser(userData)
           setCurrentView('dashboard')
         }
-      } else if (event === 'SIGNED_OUT') {
-        console.log('🔍 [AUTH DEBUG] Processing SIGNED_OUT event')
-        setUser(null)
-        setCurrentView('landing')
       }
     })
 
@@ -575,7 +590,19 @@ const App = observer(() => {
   
   const handleSignOutFromLanding = async () => {
     console.log('🔍 [AUTH DEBUG] Sign out from landing clicked')
-    await supabase.auth.signOut()
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error('🔍 [AUTH DEBUG] Logout error:', error)
+      } else {
+        console.log('🔍 [AUTH DEBUG] Logout successful from landing')
+        // Manually clear state if auth state change doesn't fire
+        setUser(null)
+        setCurrentView('landing')
+      }
+    } catch (err) {
+      console.error('🔍 [AUTH DEBUG] Logout exception:', err)
+    }
   }
 
   console.log('🔍 [AUTH DEBUG] Render state:', { 

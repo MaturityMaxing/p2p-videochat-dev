@@ -49,7 +49,7 @@ const Landing: React.FC<LandingProps> = ({ onStartMaturing, onSignIn, onSignOut,
         
         {user ? (
           <button className="signin-btn" onClick={onSignOut}>
-            Sign Out ({user.email})
+            Logout
           </button>
         ) : (
           <button className="signin-btn" onClick={onSignIn}>
