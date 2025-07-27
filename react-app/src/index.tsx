@@ -54,6 +54,7 @@ class State {
   localStream?: MediaStream
   remoteName = ''
   remoteStream?: MediaStream
+  currentUser: DatabaseUser | null = null
 }
 const state = new State()
 
@@ -162,9 +163,16 @@ const startWs = (rejoinQueue?: boolean) => {
   cleanupWs()
   state.status = 'ws-loading'
   ws = process.env.NODE_ENV === 'production' ? io() : io('localhost:4000')
+  
+  // Determine user type and name from global state
+  const user = state.currentUser
+  const userType = user ? user.user_role : 'non-member'
+  const displayName = user ? user.email : state.localName // Email for logged in, Pokemon for non-members
+  
   ws.emit('setInfo', {
-    name: state.localName,
-    // you can send other information, like to authenticate/authorize or user related data here
+    name: displayName,
+    userType: userType,
+    email: user?.email
   })
   ws.on('setInfoSuccess', d => {
     if (d.serverSocketId !== ws?.id) {
@@ -339,8 +347,18 @@ const reset = (keepName?: boolean) => {
   state.status = 'idle'
 }
 
-export const Dashboard = observer(() => {
+interface DashboardProps {
+  user: DatabaseUser | null
+}
+
+export const Dashboard = observer(({ user }: DashboardProps) => {
+  // Set current user in global state for use by websocket functions
+  state.currentUser = user
+  
   const { status, localName, localStream, remoteName, remoteStream } = state
+  
+  // Determine display name: email for logged-in users, Pokemon for non-members
+  const displayName = user ? user.email : localName
   return (
     <>
       <ToastContainer newestOnTop pauseOnFocusLoss={false} />
@@ -368,7 +386,7 @@ export const Dashboard = observer(() => {
             </div>
           ))}
         <div className='status button' onClick={forget}>
-          {localName} | {status}
+          {displayName} | {status}
         </div>
       </div>
       <div className='remote'>
@@ -496,7 +514,7 @@ const App = observer(() => {
           onSignIn={handleSignIn}
         />
       ) : (
-        <Dashboard />
+        <Dashboard user={user} />
       )}
       
       <SignInModal

@@ -10,7 +10,7 @@ import {
 } from './config'
 
 export type ClientToServerEvents = {
-  setInfo: (d: { name: string }) => void
+  setInfo: (d: { name: string; userType: 'non-member' | 'member' | 'admin'; email?: string }) => void
 
   queue: () => void
   unqueue: () => void
@@ -40,6 +40,8 @@ export type ServerToClientEvents = {
 
 type SocketData = {
   name?: string
+  userType?: 'non-member' | 'member' | 'admin'
+  email?: string
   roomId?: string
   skip?: { [otherId: string]: number }
 }
@@ -67,6 +69,8 @@ io.on('connection', (s: MySocket) => {
    */
   s.on('setInfo', d => {
     s.data.name = d.name
+    s.data.userType = d.userType
+    s.data.email = d.email
     s.emit('setInfoSuccess', {
       serverSocketId: s.id,
     })
