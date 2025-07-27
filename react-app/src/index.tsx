@@ -445,6 +445,7 @@ const App = observer(() => {
           
           if (userData) {
             setUser(userData)
+            setCurrentView('dashboard') // Fix: Set view to dashboard on refresh
           }
         }
       } catch (error) {
