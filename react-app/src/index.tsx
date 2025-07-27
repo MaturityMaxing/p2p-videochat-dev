@@ -359,6 +359,12 @@ export const Dashboard = observer(({ user }: DashboardProps) => {
   
   // Determine display name: email for logged-in users, Pokemon for non-members
   const displayName = user ? user.email : localName
+  
+  // Sign out function
+  const handleSignOut = async () => {
+    console.log('🔍 [AUTH DEBUG] Sign out clicked')
+    await supabase.auth.signOut()
+  }
   return (
     <>
       <ToastContainer newestOnTop pauseOnFocusLoss={false} />
@@ -388,6 +394,11 @@ export const Dashboard = observer(({ user }: DashboardProps) => {
         <div className='status button' onClick={forget}>
           {displayName} | {status}
         </div>
+        {user && (
+          <div className='signout button' onClick={handleSignOut}>
+            Sign Out
+          </div>
+        )}
       </div>
       <div className='remote'>
         {remoteStream && <Video stream={remoteStream} />}
