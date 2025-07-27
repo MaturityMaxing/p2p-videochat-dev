@@ -367,23 +367,38 @@ export const Dashboard = observer(({ user, onBackToLanding }: DashboardProps) =>
   const handleSignOut = async () => {
     console.log('🔍 [LOGOUT DEBUG] ===== DASHBOARD LOGOUT CLICKED =====')
     console.log('🔍 [LOGOUT DEBUG] Current user state before logout:', user)
-    console.log('🔍 [LOGOUT DEBUG] Dashboard user prop:', user)
     
-    try {
-      console.log('🔍 [LOGOUT DEBUG] Calling supabase.auth.signOut()...')
-      const result = await supabase.auth.signOut()
-      console.log('🔍 [LOGOUT DEBUG] signOut() result:', result)
-      
-      if (result.error) {
-        console.error('🔍 [LOGOUT DEBUG] signOut() returned error:', result.error)
-      } else {
-        console.log('🔍 [LOGOUT DEBUG] signOut() completed successfully')
+    // Check if session exists first
+    const { data: { session } } = await supabase.auth.getSession()
+    console.log('🔍 [LOGOUT DEBUG] Current session before logout:', session)
+    
+    if (session) {
+      try {
+        console.log('🔍 [LOGOUT DEBUG] Session exists, calling signOut()...')
+        const result = await supabase.auth.signOut()
+        console.log('🔍 [LOGOUT DEBUG] signOut() result:', result)
+        
+        if (result.error) {
+          console.error('🔍 [LOGOUT DEBUG] signOut() error:', result.error)
+          // If signOut fails, manually navigate to landing and clear state
+          console.log('🔍 [LOGOUT DEBUG] Manually navigating to landing due to signOut error')
+          onBackToLanding()
+        } else {
+          console.log('🔍 [LOGOUT DEBUG] signOut() successful, should trigger auth state change')
+        }
+      } catch (error) {
+        console.error('🔍 [LOGOUT DEBUG] signOut() exception:', error)
+        // If signOut fails, manually navigate to landing
+        console.log('🔍 [LOGOUT DEBUG] Manually navigating to landing due to exception')
+        onBackToLanding()
       }
-    } catch (error) {
-      console.error('🔍 [LOGOUT DEBUG] signOut() threw exception:', error)
+    } else {
+      console.log('🔍 [LOGOUT DEBUG] No session found, manually navigating to landing')
+      // No session exists, just navigate to landing (state will be cleared by landing page load)
+      onBackToLanding()
     }
     
-    console.log('🔍 [LOGOUT DEBUG] ===== DASHBOARD LOGOUT FUNCTION COMPLETE =====')
+    console.log('🔍 [LOGOUT DEBUG] ===== DASHBOARD LOGOUT COMPLETE =====')
   }
   
   // Back to landing function
@@ -599,23 +614,39 @@ const App = observer(() => {
   const handleSignOutFromLanding = async () => {
     console.log('🔍 [LOGOUT DEBUG] ===== LANDING LOGOUT CLICKED =====')
     console.log('🔍 [LOGOUT DEBUG] Current user state before logout:', user)
-    console.log('🔍 [LOGOUT DEBUG] Current view before logout:', currentView)
     
-    try {
-      console.log('🔍 [LOGOUT DEBUG] Calling supabase.auth.signOut()...')
-      const result = await supabase.auth.signOut()
-      console.log('🔍 [LOGOUT DEBUG] signOut() result:', result)
-      
-      if (result.error) {
-        console.error('🔍 [LOGOUT DEBUG] signOut() returned error:', result.error)
-      } else {
-        console.log('🔍 [LOGOUT DEBUG] signOut() completed successfully')
+    // Check if session exists first
+    const { data: { session } } = await supabase.auth.getSession()
+    console.log('🔍 [LOGOUT DEBUG] Current session before logout:', session)
+    
+    if (session) {
+      try {
+        console.log('🔍 [LOGOUT DEBUG] Session exists, calling signOut()...')
+        const result = await supabase.auth.signOut()
+        console.log('🔍 [LOGOUT DEBUG] signOut() result:', result)
+        
+        if (result.error) {
+          console.error('🔍 [LOGOUT DEBUG] signOut() error:', result.error)
+          // If signOut fails, manually clear state
+          console.log('🔍 [LOGOUT DEBUG] Manually clearing state due to signOut error')
+          setUser(null)
+          setCurrentView('landing')
+        }
+      } catch (error) {
+        console.error('🔍 [LOGOUT DEBUG] signOut() exception:', error)
+        // If signOut fails, manually clear state
+        console.log('🔍 [LOGOUT DEBUG] Manually clearing state due to exception')
+        setUser(null)
+        setCurrentView('landing')
       }
-    } catch (error) {
-      console.error('🔍 [LOGOUT DEBUG] signOut() threw exception:', error)
+    } else {
+      console.log('🔍 [LOGOUT DEBUG] No session found, manually clearing React state')
+      // No session exists, just clear our React state
+      setUser(null)
+      setCurrentView('landing')
     }
     
-    console.log('🔍 [LOGOUT DEBUG] ===== LANDING LOGOUT FUNCTION COMPLETE =====')
+    console.log('🔍 [LOGOUT DEBUG] ===== LANDING LOGOUT COMPLETE =====')
   }
 
   console.log('🔍 [AUTH DEBUG] Render state:', { 
