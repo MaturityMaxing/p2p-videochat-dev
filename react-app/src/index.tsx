@@ -433,24 +433,55 @@ const App = observer(() => {
   useEffect(() => {
     // Check initial auth state
     const checkAuth = async () => {
+      console.log('🔍 [AUTH DEBUG] Starting checkAuth process...')
       try {
-        const { data: { session } } = await supabase.auth.getSession()
+        console.log('🔍 [AUTH DEBUG] Getting session...')
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        
+        console.log('🔍 [AUTH DEBUG] Session result:', { 
+          hasSession: !!session, 
+          userEmail: session?.user?.email,
+          sessionError 
+        })
+        
+        if (sessionError) {
+          console.error('🔍 [AUTH DEBUG] Session error:', sessionError)
+        }
+        
         if (session?.user?.email) {
+          console.log('🔍 [AUTH DEBUG] Session found, querying database for user:', session.user.email)
+          
           // Fetch user data from our database
-          const { data: userData } = await supabase
+          const { data: userData, error: dbError } = await supabase
             .from('users')
             .select('*')
             .eq('email', session.user.email)
             .single()
           
-          if (userData) {
-            setUser(userData)
-            setCurrentView('dashboard') // Fix: Set view to dashboard on refresh
+          console.log('🔍 [AUTH DEBUG] Database query result:', { 
+            hasUserData: !!userData, 
+            userData,
+            dbError 
+          })
+          
+          if (dbError) {
+            console.error('🔍 [AUTH DEBUG] Database error:', dbError)
           }
+          
+          if (userData) {
+            console.log('🔍 [AUTH DEBUG] Setting user data and should redirect to dashboard')
+            setUser(userData)
+            console.log('🔍 [AUTH DEBUG] Current view should change to dashboard, but currentView state is:', currentView)
+          } else {
+            console.log('🔍 [AUTH DEBUG] No user data found in database')
+          }
+        } else {
+          console.log('🔍 [AUTH DEBUG] No session or email found')
         }
       } catch (error) {
-        console.error('Auth check error:', error)
+        console.error('🔍 [AUTH DEBUG] Catch block error:', error)
       } finally {
+        console.log('🔍 [AUTH DEBUG] Setting authLoading to false')
         setAuthLoading(false)
       }
     }
@@ -459,18 +490,29 @@ const App = observer(() => {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔍 [AUTH DEBUG] Auth state change:', { 
+        event, 
+        hasSession: !!session, 
+        userEmail: session?.user?.email 
+      })
+      
       if (event === 'SIGNED_IN' && session?.user?.email) {
-        const { data: userData } = await supabase
+        console.log('🔍 [AUTH DEBUG] Processing SIGNED_IN event')
+        const { data: userData, error: dbError } = await supabase
           .from('users')
           .select('*')
           .eq('email', session.user.email)
           .single()
         
+        console.log('🔍 [AUTH DEBUG] Auth change DB query result:', { userData, dbError })
+        
         if (userData) {
+          console.log('🔍 [AUTH DEBUG] Setting user and switching to dashboard from auth change')
           setUser(userData)
           setCurrentView('dashboard')
         }
       } else if (event === 'SIGNED_OUT') {
+        console.log('🔍 [AUTH DEBUG] Processing SIGNED_OUT event')
         setUser(null)
         setCurrentView('landing')
       }
@@ -480,6 +522,7 @@ const App = observer(() => {
   }, [])
 
   const handleStartMaturing = () => {
+    console.log('🔍 [AUTH DEBUG] handleStartMaturing clicked, switching to dashboard')
     setCurrentView('dashboard')
   }
 
@@ -492,7 +535,15 @@ const App = observer(() => {
     // User state will be updated by the auth state change listener
   }
 
+  console.log('🔍 [AUTH DEBUG] Render state:', { 
+    authLoading, 
+    currentView, 
+    hasUser: !!user,
+    userEmail: user?.email 
+  })
+  
   if (authLoading) {
+    console.log('🔍 [AUTH DEBUG] Showing loading screen')
     return (
       <div style={{ 
         display: 'flex', 
