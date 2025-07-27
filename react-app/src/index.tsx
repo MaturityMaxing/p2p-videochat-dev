@@ -7,7 +7,7 @@ import 'webrtc-adapter'
 import { configure, makeAutoObservable } from 'mobx'
 import { observer } from 'mobx-react-lite'
 import pokemon from 'pokemon'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { toast, ToastContainer } from 'react-toastify'
 import { io, Socket } from 'socket.io-client'
@@ -16,6 +16,9 @@ import './index.scss'
 
 import type { ClientToServerEvents, ServerToClientEvents } from '../../server'
 import noise from './assets/noise.mp3'
+import { supabase, type DatabaseUser } from './supabase'
+import Landing from './Landing'
+import SignInModal from './SignInModal'
 
 configure({ enforceActions: 'never' })
 
@@ -336,7 +339,7 @@ const reset = (keepName?: boolean) => {
   state.status = 'idle'
 }
 
-export const App = observer(() => {
+export const Dashboard = observer(() => {
   const { status, localName, localStream, remoteName, remoteStream } = state
   return (
     <>
@@ -401,6 +404,109 @@ const Video = (p: { stream: MediaStream; muted?: boolean }) => {
   }, [p.stream])
   return <video ref={r} loop playsInline controls={false} muted={p.muted} />
 }
+
+// Auth wrapper component
+const App = observer(() => {
+  const [currentView, setCurrentView] = useState<'landing' | 'dashboard'>('landing')
+  const [isSignInModalOpen, setIsSignInModalOpen] = useState(false)
+  const [user, setUser] = useState<DatabaseUser | null>(null)
+  const [authLoading, setAuthLoading] = useState(true)
+
+  useEffect(() => {
+    // Check initial auth state
+    const checkAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.user?.email) {
+          // Fetch user data from our database
+          const { data: userData } = await supabase
+            .from('users')
+            .select('*')
+            .eq('email', session.user.email)
+            .single()
+          
+          if (userData) {
+            setUser(userData)
+          }
+        }
+      } catch (error) {
+        console.error('Auth check error:', error)
+      } finally {
+        setAuthLoading(false)
+      }
+    }
+
+    checkAuth()
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user?.email) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', session.user.email)
+          .single()
+        
+        if (userData) {
+          setUser(userData)
+          setCurrentView('dashboard')
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null)
+        setCurrentView('landing')
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const handleStartMaturing = () => {
+    setCurrentView('dashboard')
+  }
+
+  const handleSignIn = () => {
+    setIsSignInModalOpen(true)
+  }
+
+  const handleSignInSuccess = () => {
+    setIsSignInModalOpen(false)
+    // User state will be updated by the auth state change listener
+  }
+
+  if (authLoading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh', 
+        fontSize: '1.5rem',
+        fontWeight: 'bold'
+      }}>
+        Loading...
+      </div>
+    )
+  }
+
+  return (
+    <>
+      {currentView === 'landing' ? (
+        <Landing 
+          onStartMaturing={handleStartMaturing}
+          onSignIn={handleSignIn}
+        />
+      ) : (
+        <Dashboard />
+      )}
+      
+      <SignInModal
+        isOpen={isSignInModalOpen}
+        onClose={() => setIsSignInModalOpen(false)}
+        onSignInSuccess={handleSignInSuccess}
+      />
+    </>
+  )
+})
 
 const div = document.getElementById('root') as HTMLDivElement
 createRoot(div).render(<App />)
