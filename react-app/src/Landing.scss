@@ -86,8 +86,10 @@
   color: #ff6b35;
   display: inline-block;
   animation: slideIn 0.5s ease-out;
-  min-width: 300px;
+  min-width: 400px;
   text-align: left;
+  line-height: 1.2;
+  max-width: 600px;
 }
 
 @keyframes slideIn {
@@ -143,7 +145,9 @@
   }
   
   .rotating-text {
-    min-width: 200px;
+    min-width: 280px;
+    max-width: 400px;
+    font-size: 1.6rem;
   }
   
   .signin-btn {
@@ -167,6 +171,8 @@
   }
   
   .rotating-text {
-    min-width: 150px;
+    min-width: 250px;
+    max-width: 300px;
+    font-size: 1.2rem;
   }
 } 
