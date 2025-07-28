@@ -5,7 +5,7 @@ APP_DIR=/var/www/vender_source_code
 
 echo "🚀 Deploying to DEV..."
 pnpm install
-cd react-app && DISABLE_ESLINT_PLUGIN=true pnpm build && cd ..
+cd react-app && pnpm build && cd ..
 rm -rf vender_react_app
 mv react-app/build vender_react_app
 zip -qr vender_react_app.zip vender_react_app
