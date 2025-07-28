@@ -11,6 +11,9 @@ importers:
 
   '#/eslint-config':
     dependencies:
+      '@types/eslint':
+        specifier: ^8.56.0
+        version: 8.56.12
       '@typescript-eslint/eslint-plugin':
         specifier: 6.13.2
         version: 6.13.2(@typescript-eslint/parser@6.13.2(eslint@8.55.0)(typescript@5.3.3))(eslint@8.55.0)(typescript@5.3.3)
@@ -1359,9 +1362,6 @@ packages:
 
   '@types/eslint@8.56.12':
     resolution: {integrity: sha512-03ruubjWyOHlmljCVoxSuNDdmfZDzsrrz0P2LeJsOXr+ZwFQ+0yQIwNCwt/GYhV7Z31fgtXJTAEs+FYlEL851g==}
-
-  '@types/eslint@9.6.1':
-    resolution: {integrity: sha512-FXx2pKgId/WyYo2jXw63kk7/+TY7u7AziEJxJAnSFzHlqTAS3Ync6SvgYAN/k4/PQpnnVuzoMuVnByKK2qp0ag==}
 
   '@types/estree@0.0.39':
     resolution: {integrity: sha512-EYNwp3bU+98cpU4lAWYYL7Zz+2gryWH1qbdDTidVd6hkiR6weksdbMadyXKXNPEkQFhXM+hVO9ZygomHXp+AIw==}
@@ -7688,15 +7688,10 @@ snapshots:
 
   '@types/eslint-scope@3.7.7':
     dependencies:
-      '@types/eslint': 9.6.1
+      '@types/eslint': 8.56.12
       '@types/estree': 1.0.8
 
   '@types/eslint@8.56.12':
-    dependencies:
-      '@types/estree': 1.0.8
-      '@types/json-schema': 7.0.15
-
-  '@types/eslint@9.6.1':
     dependencies:
       '@types/estree': 1.0.8
       '@types/json-schema': 7.0.15
