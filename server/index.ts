@@ -131,7 +131,8 @@ const processQueue = () => {
   }
   const s1 = queue.shift() as MySocket
   const notskip = queue.filter(_ => !checkSkipEither(s1, _))
-  const s2 = notskip[integer(0, notskip.length - 1)(nodeCrypto)]
+  const compatible = notskip.filter(_ => checkUserTypeCompatibility(s1, _))
+  const s2 = compatible[integer(0, compatible.length - 1)(nodeCrypto)]
   if (s2) {
     queue = queue.filter(_ => _ !== s2)
     pair(s1, s2)
@@ -240,6 +241,16 @@ const checkSkip = (s: MySocket, other: MySocket) => {
 }
 const checkSkipEither = (s1: MySocket, s2: MySocket) =>
   checkSkip(s1, s2) || checkSkip(s2, s1)
+
+const checkUserTypeCompatibility = (s1: MySocket, s2: MySocket): boolean => {
+  const type1 = s1.data.userType || 'non-member'
+  const type2 = s2.data.userType || 'non-member'
+  
+  // Valid pairings: non-member ↔ admin, non-member ↔ member
+  // Invalid: non-member ↔ non-member, member ↔ member, member ↔ admin, admin ↔ admin
+  return (type1 === 'non-member' && (type2 === 'admin' || type2 === 'member')) ||
+         (type2 === 'non-member' && (type1 === 'admin' || type1 === 'member'))
+}
 
 const port = 4000
 console.log(`prepare to listen on port ${port}`)
