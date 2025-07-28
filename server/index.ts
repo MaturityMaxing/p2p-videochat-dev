@@ -130,10 +130,19 @@ const processQueue = () => {
     return
   }
   const s1 = queue.shift() as MySocket
+  console.log(`[QUEUE DEBUG] Processing user s1: id=${s1.id}, userType=${s1.data.userType}, name=${s1.data.name}`)
   const notskip = queue.filter(_ => !checkSkipEither(s1, _))
+  console.log(`[QUEUE DEBUG] After skip filter: ${notskip.length} users available`)
   const compatible = notskip.filter(_ => checkUserTypeCompatibility(s1, _))
+  console.log(`[QUEUE DEBUG] After compatibility filter: ${compatible.length} users available`)
+  if (compatible.length > 0) {
+    compatible.forEach((user, index) => {
+      console.log(`[QUEUE DEBUG] Compatible user ${index}: id=${user.id}, userType=${user.data.userType}, name=${user.data.name}`)
+    })
+  }
   const s2 = compatible[integer(0, compatible.length - 1)(nodeCrypto)]
   if (s2) {
+    console.log(`[QUEUE DEBUG] Selected match: s1(${s1.data.userType}) ↔ s2(${s2.data.userType})`)
     queue = queue.filter(_ => _ !== s2)
     pair(s1, s2)
   }
@@ -248,8 +257,10 @@ const checkUserTypeCompatibility = (s1: MySocket, s2: MySocket): boolean => {
   
   // Valid pairings: non-member ↔ admin, non-member ↔ member
   // Invalid: non-member ↔ non-member, member ↔ member, member ↔ admin, admin ↔ admin
-  return (type1 === 'non-member' && (type2 === 'admin' || type2 === 'member')) ||
+  const isCompatible = (type1 === 'non-member' && (type2 === 'admin' || type2 === 'member')) ||
          (type2 === 'non-member' && (type1 === 'admin' || type1 === 'member'))
+  console.log(`[COMPATIBILITY DEBUG] s1(${type1}) ↔ s2(${type2}) -> ${isCompatible}`)
+  return isCompatible
 }
 
 const port = 4000
