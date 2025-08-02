@@ -50,24 +50,50 @@ const SignUpModal: React.FC<SignUpModalProps> = ({ isOpen, onClose, onSignUpSucc
       }
 
       if (authData.user) {
-        // Insert user into our database with member role
-        const { error: dbError } = await supabase
+        // First check if user already exists in database
+        const { data: existingUser, error: checkError } = await supabase
           .from('users')
-          .insert([
-            {
-              id: authData.user.id,
-              email: authData.user.email,
-              user_role: 'member',
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }
-          ])
+          .select('*')
+          .eq('email', authData.user.email)
+          .single()
 
-        if (dbError) {
-          console.error('Database insert error:', dbError)
-          setError('Account created but failed to save user data')
+        if (checkError && checkError.code !== 'PGRST116') {
+          // PGRST116 is "not found" error, which is expected for new users
+          console.error('Error checking existing user:', checkError)
+          setError('Error checking user status')
           setLoading(false)
           return
+        }
+
+        if (!existingUser) {
+          // User doesn't exist in database, try to insert
+          const { error: dbError } = await supabase
+            .from('users')
+            .insert([
+              {
+                id: authData.user.id,
+                email: authData.user.email,
+                user_role: 'member',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }
+            ])
+
+          if (dbError) {
+            console.error('Database insert error:', dbError)
+            console.error('Full error details:', JSON.stringify(dbError, null, 2))
+            
+            // More specific error messages
+            if (dbError.code === '42501') {
+              setError('Permission denied. Please contact support.')
+            } else if (dbError.code === '23505') {
+              setError('User already exists in database.')
+            } else {
+              setError(`Database error: ${dbError.message || 'Unknown error'}`)
+            }
+            setLoading(false)
+            return
+          }
         }
 
         // Success - call the callback
