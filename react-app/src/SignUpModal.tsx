@@ -22,6 +22,17 @@ const SignUpModal: React.FC<SignUpModalProps> = ({ isOpen, onClose, onSignUpSucc
     setLoading(true)
     setError('')
 
+    // Normalize email (trim and lowercase)
+    const normalizedEmail = email.trim().toLowerCase()
+
+    // Enhanced email validation
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+    if (!emailRegex.test(normalizedEmail)) {
+      setError('Please enter a valid email address')
+      setLoading(false)
+      return
+    }
+
     // Validate passwords match
     if (password !== confirmPassword) {
       setError('Passwords do not match')
@@ -37,24 +48,43 @@ const SignUpModal: React.FC<SignUpModalProps> = ({ isOpen, onClose, onSignUpSucc
     }
 
     try {
-      // Sign up the user
+      console.log('🔍 [SIGNUP DEBUG] Attempting signup with email:', normalizedEmail)
+      
+      // Sign up the user with normalized email
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
+        email: normalizedEmail,
         password,
       })
 
+      console.log('🔍 [SIGNUP DEBUG] Auth result:', { 
+        hasUser: !!authData.user,
+        userEmail: authData.user?.email,
+        error: authError 
+      })
+
       if (authError) {
-        setError(authError.message)
+        console.error('🔍 [SIGNUP DEBUG] Auth error:', authError)
+        
+        // Better error messages for common Supabase Auth errors
+        if (authError.message.includes('email') && authError.message.includes('invalid')) {
+          setError('Email format is invalid. Please use a standard email format.')
+        } else if (authError.message.includes('User already registered')) {
+          setError('An account with this email already exists. Please sign in instead.')
+        } else {
+          setError(authError.message)
+        }
         setLoading(false)
         return
       }
 
       if (authData.user) {
+        console.log('🔍 [SIGNUP DEBUG] Auth successful, checking database...')
+        
         // First check if user already exists in database
         const { data: existingUser, error: checkError } = await supabase
           .from('users')
           .select('*')
-          .eq('email', authData.user.email)
+          .eq('email', normalizedEmail)
           .single()
 
         if (checkError && checkError.code !== 'PGRST116') {
@@ -66,13 +96,15 @@ const SignUpModal: React.FC<SignUpModalProps> = ({ isOpen, onClose, onSignUpSucc
         }
 
         if (!existingUser) {
+          console.log('🔍 [SIGNUP DEBUG] User not in database, inserting...')
+          
           // User doesn't exist in database, try to insert
           const { error: dbError } = await supabase
             .from('users')
             .insert([
               {
                 id: authData.user.id,
-                email: authData.user.email,
+                email: normalizedEmail,
                 user_role: 'member',
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
@@ -94,9 +126,14 @@ const SignUpModal: React.FC<SignUpModalProps> = ({ isOpen, onClose, onSignUpSucc
             setLoading(false)
             return
           }
+          
+          console.log('🔍 [SIGNUP DEBUG] Database insert successful!')
+        } else {
+          console.log('🔍 [SIGNUP DEBUG] User already exists in database')
         }
 
         // Success - call the callback
+        console.log('🔍 [SIGNUP DEBUG] Signup complete, redirecting to members page')
         onSignUpSuccess()
         onClose()
       }
@@ -138,8 +175,10 @@ const SignUpModal: React.FC<SignUpModalProps> = ({ isOpen, onClose, onSignUpSucc
               id="signup-email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onBlur={(e) => setEmail(e.target.value.trim().toLowerCase())}
               required
               disabled={loading}
+              placeholder="your.email@example.com"
             />
           </div>
 
