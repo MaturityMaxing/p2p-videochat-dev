@@ -20,6 +20,8 @@ import noise from './assets/noise.mp3'
 import { supabase, type DatabaseUser } from './supabase'
 import Landing from './Landing'
 import SignInModal from './SignInModal'
+import SignUpModal from './SignUpModal'
+import MembersPage from './MembersPage'
 
 configure({ enforceActions: 'never' })
 
@@ -353,14 +355,14 @@ const reset = (keepName?: boolean) => {
 interface DashboardProps {
   user: DatabaseUser | null
   onBackToLanding: () => void
+  onSignUp: () => void
 }
 
-export const Dashboard = observer(({ user, onBackToLanding }: DashboardProps) => {
+export const Dashboard = observer(({ user, onBackToLanding, onSignUp }: DashboardProps) => {
   // Set current user in global state for use by websocket functions
   state.currentUser = user
   
   const { status, localName, localStream, remoteName, remoteStream } = state
-  const [memberCTAClicked, setMemberCTAClicked] = useState(false)
   
   // Determine display name: email for logged-in users, Pokemon for non-members
   const displayName = user ? user.email : localName
@@ -412,8 +414,7 @@ export const Dashboard = observer(({ user, onBackToLanding }: DashboardProps) =>
   // Member CTA handler
   const handleMemberCTA = () => {
     console.log('🔍 [MEMBER] Start Mature Maxing clicked')
-    setMemberCTAClicked(true)
-    // TODO: Implement Stripe/crypto payment flow
+    onSignUp()
   }
   return (
     <>
@@ -470,7 +471,7 @@ export const Dashboard = observer(({ user, onBackToLanding }: DashboardProps) =>
         {!user && (
           <div className='member-overlay'>
             <button className='member-cta' onClick={handleMemberCTA}>
-              {memberCTAClicked ? 'Coming soon' : 'Start Mature Maxing'}
+              Start Mature Maxing
             </button>
           </div>
         )}
@@ -503,8 +504,9 @@ const Video = (p: { stream: MediaStream; muted?: boolean }) => {
 
 // Auth wrapper component
 const App = observer(() => {
-  const [currentView, setCurrentView] = useState<'landing' | 'dashboard'>('landing')
+  const [currentView, setCurrentView] = useState<'landing' | 'dashboard' | 'members'>('landing')
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false)
+  const [isSignUpModalOpen, setIsSignUpModalOpen] = useState(false)
   const [user, setUser] = useState<DatabaseUser | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
 
@@ -633,6 +635,17 @@ const App = observer(() => {
     setIsSignInModalOpen(false)
     // User state will be updated by the auth state change listener
   }
+
+  const handleSignUp = () => {
+    setIsSignUpModalOpen(true)
+  }
+
+  const handleSignUpSuccess = () => {
+    setIsSignUpModalOpen(false)
+    // Redirect to members page after successful signup
+    setCurrentView('members')
+    // User state will be updated by the auth state change listener
+  }
   
   const handleSignOutFromLanding = async () => {
     console.log('🔍 [LOGOUT DEBUG] ===== LANDING LOGOUT CLICKED =====')
@@ -704,14 +717,22 @@ const App = observer(() => {
           onSignOut={handleSignOutFromLanding}
           user={user}
         />
+      ) : currentView === 'dashboard' ? (
+        <Dashboard user={user} onBackToLanding={handleBackToLanding} onSignUp={handleSignUp} />
       ) : (
-        <Dashboard user={user} onBackToLanding={handleBackToLanding} />
+        <MembersPage user={user!} onBackToLanding={handleBackToLanding} />
       )}
       
       <SignInModal
         isOpen={isSignInModalOpen}
         onClose={() => setIsSignInModalOpen(false)}
         onSignInSuccess={handleSignInSuccess}
+      />
+      
+      <SignUpModal
+        isOpen={isSignUpModalOpen}
+        onClose={() => setIsSignUpModalOpen(false)}
+        onSignUpSuccess={handleSignUpSuccess}
       />
     </>
   )
