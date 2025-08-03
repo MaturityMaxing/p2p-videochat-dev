@@ -356,9 +356,10 @@ interface DashboardProps {
   user: DatabaseUser | null
   onBackToLanding: () => void
   onSignUp: () => void
+  onMemberDashboard: () => void
 }
 
-export const Dashboard = observer(({ user, onBackToLanding, onSignUp }: DashboardProps) => {
+export const Dashboard = observer(({ user, onBackToLanding, onSignUp, onMemberDashboard }: DashboardProps) => {
   // Set current user in global state for use by websocket functions
   state.currentUser = user
   
@@ -412,10 +413,7 @@ export const Dashboard = observer(({ user, onBackToLanding, onSignUp }: Dashboar
   }
   
   // Member CTA handler
-  const handleMemberCTA = () => {
-    console.log('🔍 [MEMBER] Start Mature Maxing clicked')
-    onSignUp()
-  }
+
   return (
     <>
       <ToastContainer newestOnTop pauseOnFocusLoss={false} />
@@ -468,10 +466,11 @@ export const Dashboard = observer(({ user, onBackToLanding, onSignUp }: Dashboar
         </div>
         
         {/* Member CTA - positioned in bottom right of beige section */}
-        {!user && (
+        {/* Hide button when user is in queue, connecting, or connected */}
+        {status !== 'in-queue' && status !== 'webrtc-loading' && status !== 'success' && (
           <div className='member-overlay'>
-            <button className='member-cta' onClick={handleMemberCTA}>
-              Start Mature Maxing
+            <button className='member-cta' onClick={user ? onMemberDashboard : onSignUp}>
+              {user ? "Member's Dashboard" : "Start Mature Maxing"}
             </button>
           </div>
         )}
@@ -646,6 +645,11 @@ const App = observer(() => {
     setCurrentView('members')
     // User state will be updated by the auth state change listener
   }
+
+  const handleMemberDashboard = () => {
+    console.log('🔍 [MEMBER] Member Dashboard clicked')
+    setCurrentView('members')
+  }
   
   const handleSignOutFromLanding = async () => {
     console.log('🔍 [LOGOUT DEBUG] ===== LANDING LOGOUT CLICKED =====')
@@ -718,7 +722,7 @@ const App = observer(() => {
           user={user}
         />
       ) : currentView === 'dashboard' ? (
-        <Dashboard user={user} onBackToLanding={handleBackToLanding} onSignUp={handleSignUp} />
+        <Dashboard user={user} onBackToLanding={handleBackToLanding} onSignUp={handleSignUp} onMemberDashboard={handleMemberDashboard} />
       ) : (
         <MembersPage user={user!} onBackToLanding={handleBackToLanding} />
       )}
