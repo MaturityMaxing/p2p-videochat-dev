@@ -80,6 +80,11 @@ const SignUpModal: React.FC<SignUpModalProps> = ({ isOpen, onClose, onSignUpSucc
       if (authData.user) {
         console.log('🔍 [SIGNUP DEBUG] Auth successful, waiting for trigger to create user record...')
         
+        // ⚡ DIAGNOSTICS - Check session state after signup
+        console.log('🔍 [SIGNUP DEBUG] session after signUp:', authData.session);
+        const { data: s } = await supabase.auth.getSession();
+        console.log('🔍 [SIGNUP DEBUG] getSession() immediately after signUp:', s);
+        
         // Wait a moment for the database trigger to create the user record
         await new Promise(resolve => setTimeout(resolve, 1000))
         
@@ -96,6 +101,10 @@ const SignUpModal: React.FC<SignUpModalProps> = ({ isOpen, onClose, onSignUpSucc
             .select('*')
             .eq('email', normalizedEmail)
             .single()
+
+          // ⚡ DIAGNOSTICS - Log the exact error details
+          console.log('🔍 [SIGNUP DEBUG] select error:', checkError);
+          console.log('🔍 [SIGNUP DEBUG] select data:', user);
 
           if (checkError && checkError.code !== 'PGRST116') {
             console.error('Error checking user record:', checkError)
