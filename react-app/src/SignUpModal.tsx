@@ -78,58 +78,48 @@ const SignUpModal: React.FC<SignUpModalProps> = ({ isOpen, onClose, onSignUpSucc
       }
 
       if (authData.user) {
-        console.log('🔍 [SIGNUP DEBUG] Auth successful, checking database...')
+        console.log('🔍 [SIGNUP DEBUG] Auth successful, waiting for trigger to create user record...')
         
-        // First check if user already exists in database
-        const { data: existingUser, error: checkError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', normalizedEmail)
-          .single()
-
-        if (checkError && checkError.code !== 'PGRST116') {
-          // PGRST116 is "not found" error, which is expected for new users
-          console.error('Error checking existing user:', checkError)
-          setError('Error checking user status')
-          setLoading(false)
-          return
-        }
-
-        if (!existingUser) {
-          console.log('🔍 [SIGNUP DEBUG] User not in database, inserting...')
+        // Wait a moment for the database trigger to create the user record
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        
+        // Check if the trigger created the user record
+        let attempts = 0
+        const maxAttempts = 5
+        let userData = null
+        
+        while (attempts < maxAttempts && !userData) {
+          console.log(`🔍 [SIGNUP DEBUG] Checking for user record (attempt ${attempts + 1}/${maxAttempts})...`)
           
-          // User doesn't exist in database, try to insert
-          const { error: dbError } = await supabase
+          const { data: user, error: checkError } = await supabase
             .from('users')
-            .insert([
-              {
-                id: authData.user.id,
-                email: normalizedEmail,
-                user_role: 'member',
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              }
-            ])
+            .select('*')
+            .eq('email', normalizedEmail)
+            .single()
 
-          if (dbError) {
-            console.error('Database insert error:', dbError)
-            console.error('Full error details:', JSON.stringify(dbError, null, 2))
-            
-            // More specific error messages
-            if (dbError.code === '42501') {
-              setError('Permission denied. Please contact support.')
-            } else if (dbError.code === '23505') {
-              setError('User already exists in database.')
-            } else {
-              setError(`Database error: ${dbError.message || 'Unknown error'}`)
-            }
-            setLoading(false)
-            return
+          if (checkError && checkError.code !== 'PGRST116') {
+            console.error('Error checking user record:', checkError)
+            break
           }
           
-          console.log('🔍 [SIGNUP DEBUG] Database insert successful!')
-        } else {
-          console.log('🔍 [SIGNUP DEBUG] User already exists in database')
+          if (user) {
+            userData = user
+            console.log('🔍 [SIGNUP DEBUG] User record found:', userData)
+            break
+          }
+          
+          attempts++
+          if (attempts < maxAttempts) {
+            // Wait before next attempt
+            await new Promise(resolve => setTimeout(resolve, 500))
+          }
+        }
+        
+        if (!userData) {
+          console.error('🔍 [SIGNUP DEBUG] User record not created by trigger after multiple attempts')
+          setError('Account created but user profile setup failed. Please contact support.')
+          setLoading(false)
+          return
         }
 
         // Success - call the callback
