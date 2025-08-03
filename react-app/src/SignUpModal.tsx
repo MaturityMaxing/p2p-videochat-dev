@@ -85,6 +85,25 @@ const SignUpModal: React.FC<SignUpModalProps> = ({ isOpen, onClose, onSignUpSucc
         const { data: s } = await supabase.auth.getSession();
         console.log('🔍 [SIGNUP DEBUG] getSession() immediately after signUp:', s);
         
+        // If no session after signup (email confirmation enabled), sign in immediately
+        if (!authData.session) {
+          console.log('🔍 [SIGNUP DEBUG] No session after signup, signing in with password...')
+          
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+            email: normalizedEmail,
+            password,
+          })
+          
+          if (signInError) {
+            console.error('🔍 [SIGNUP DEBUG] Sign in after signup failed:', signInError)
+            setError('Account created but sign-in failed. Please try signing in manually.')
+            setLoading(false)
+            return
+          }
+          
+          console.log('🔍 [SIGNUP DEBUG] Sign in successful, session:', signInData.session)
+        }
+        
         // Wait a moment for the database trigger to create the user record
         await new Promise(resolve => setTimeout(resolve, 1000))
         
