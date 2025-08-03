@@ -96,12 +96,27 @@ const SignUpModal: React.FC<SignUpModalProps> = ({ isOpen, onClose, onSignUpSucc
           
           if (signInError) {
             console.error('🔍 [SIGNUP DEBUG] Sign in after signup failed:', signInError)
-            setError('Account created but sign-in failed. Please try signing in manually.')
-            setLoading(false)
-            return
+            console.error('🔍 [SIGNUP DEBUG] Sign in error details:', JSON.stringify(signInError, null, 2))
+            console.error('🔍 [SIGNUP DEBUG] Attempted email:', normalizedEmail)
+            console.error('🔍 [SIGNUP DEBUG] Password length:', password.length)
+            
+            // Check if it's an email confirmation issue
+            if (signInError.message.includes('Email not confirmed') || signInError.message.includes('confirm')) {
+              console.log('🔍 [SIGNUP DEBUG] Email confirmation required - trying different approach...')
+              
+              // For email confirmation required, let's proceed without signing in
+              // and try to access the user record using the service role or a different method
+              console.log('🔍 [SIGNUP DEBUG] Proceeding without session - will check if user exists in auth.users')
+              
+              // Continue to user record check without session
+            } else {
+              setError('Account created but sign-in failed. Please try signing in manually.')
+              setLoading(false)
+              return
+            }
+          } else {
+            console.log('🔍 [SIGNUP DEBUG] Sign in successful, session:', signInData.session)
           }
-          
-          console.log('🔍 [SIGNUP DEBUG] Sign in successful, session:', signInData.session)
         }
         
         // Wait a moment for the database trigger to create the user record
@@ -115,11 +130,23 @@ const SignUpModal: React.FC<SignUpModalProps> = ({ isOpen, onClose, onSignUpSucc
         while (attempts < maxAttempts && !userData) {
           console.log(`🔍 [SIGNUP DEBUG] Checking for user record (attempt ${attempts + 1}/${maxAttempts})...`)
           
-          const { data: user, error: checkError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('email', normalizedEmail)
-            .single()
+          // Try two approaches: by email (if we have session) or by auth user ID (if no session)
+          let query
+          if (authData.session || (await supabase.auth.getSession()).data.session) {
+            console.log('🔍 [SIGNUP DEBUG] Using email-based query (authenticated)')
+            query = supabase
+              .from('users')
+              .select('*')
+              .eq('email', normalizedEmail)
+          } else {
+            console.log('🔍 [SIGNUP DEBUG] Using user ID-based query (no session, but we have auth user ID)')
+            query = supabase
+              .from('users')
+              .select('*')
+              .eq('id', authData.user.id)
+          }
+          
+          const { data: user, error: checkError } = await query.single()
 
           // ⚡ DIAGNOSTICS - Log the exact error details
           console.log('🔍 [SIGNUP DEBUG] select error:', checkError);
