@@ -22,6 +22,9 @@ import Landing from './Landing'
 import SignInModal from './SignInModal'
 import SignUpModal from './SignUpModal'
 import MembersPage from './MembersPage'
+import OnboardingPage from './OnboardingPage'
+import MapPage from './MapPage'
+import BuildingPage from './BuildingPage'
 
 configure({ enforceActions: 'never' })
 
@@ -467,10 +470,10 @@ export const Dashboard = observer(({ user, onBackToLanding, onSignUp, onMemberDa
         
         {/* Member CTA - positioned in bottom right of beige section */}
         {/* Hide button when user is in queue, connecting, or connected */}
-        {status !== 'in-queue' && status !== 'webrtc-loading' && status !== 'success' && (
+        {status !== 'in-queue' && status !== 'webrtc-loading' && status !== 'success' && user && (
           <div className='member-overlay'>
-            <button className='member-cta' onClick={user ? onMemberDashboard : onSignUp}>
-              {user ? "Member's Dashboard" : "Start Mature Maxing"}
+            <button className='member-cta' onClick={onMemberDashboard}>
+              Member's Dashboard
             </button>
           </div>
         )}
@@ -503,11 +506,13 @@ const Video = (p: { stream: MediaStream; muted?: boolean }) => {
 
 // Auth wrapper component
 const App = observer(() => {
-  const [currentView, setCurrentView] = useState<'landing' | 'dashboard' | 'members'>('landing')
+  const [currentView, setCurrentView] = useState<'landing' | 'dashboard' | 'members' | 'onboarding' | 'map' | 'building'>('landing')
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false)
   const [isSignUpModalOpen, setIsSignUpModalOpen] = useState(false)
   const [user, setUser] = useState<DatabaseUser | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
+  const [onboardingStep, setOnboardingStep] = useState(1)
+  const [currentBuildingId, setCurrentBuildingId] = useState<string>('')
 
   useEffect(() => {
     let isInitialLoad = true
@@ -617,8 +622,9 @@ const App = observer(() => {
   }, [])
 
   const handleStartMaturing = () => {
-    console.log('🔍 [AUTH DEBUG] handleStartMaturing clicked, switching to dashboard')
-    setCurrentView('dashboard')
+    console.log('🔍 [AUTH DEBUG] handleStartMaturing clicked, switching to onboarding')
+    setOnboardingStep(1)
+    setCurrentView('onboarding')
   }
   
   const handleBackToLanding = () => {
@@ -649,6 +655,39 @@ const App = observer(() => {
   const handleMemberDashboard = () => {
     console.log('🔍 [MEMBER] Member Dashboard clicked')
     setCurrentView('members')
+  }
+
+  // New handlers for onboarding flow
+  const handleOnboardingContinue = () => {
+    if (onboardingStep < 5) {
+      setOnboardingStep(onboardingStep + 1)
+    } else {
+      setCurrentView('map')
+    }
+  }
+
+  const handleOnboardingBack = () => {
+    if (onboardingStep > 1) {
+      setOnboardingStep(onboardingStep - 1)
+    } else {
+      setCurrentView('landing')
+    }
+  }
+
+  const handleBuildingClick = (buildingId: string) => {
+    console.log('🔍 [MAP] Building clicked:', buildingId)
+    setCurrentBuildingId(buildingId)
+    
+    // Special case: if videochat building is clicked, go to dashboard
+    if (buildingId === 'videochat') {
+      setCurrentView('dashboard')
+    } else {
+      setCurrentView('building')
+    }
+  }
+
+  const handleBackToMap = () => {
+    setCurrentView('map')
   }
   
   const handleSignOutFromLanding = async () => {
@@ -745,6 +784,22 @@ const App = observer(() => {
           onSignIn={handleSignIn}
           onSignOut={handleSignOutFromLanding}
           user={user}
+        />
+      ) : currentView === 'onboarding' ? (
+        <OnboardingPage
+          currentStep={onboardingStep}
+          onContinue={handleOnboardingContinue}
+          onBack={handleOnboardingBack}
+        />
+      ) : currentView === 'map' ? (
+        <MapPage
+          onBuildingClick={handleBuildingClick}
+          onBackToLanding={handleBackToLanding}
+        />
+      ) : currentView === 'building' ? (
+        <BuildingPage
+          buildingId={currentBuildingId}
+          onBackToMap={handleBackToMap}
         />
       ) : currentView === 'dashboard' ? (
         <Dashboard user={user} onBackToLanding={handleBackToLanding} onSignUp={handleSignUp} onMemberDashboard={handleMemberDashboard} />

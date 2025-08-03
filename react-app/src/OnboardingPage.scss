@@ -1,0 +1,64 @@
+.onboarding-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.onboarding-content {
+  text-align: center;
+  max-width: 600px;
+  padding: 2rem;
+}
+
+.onboarding-title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 3rem;
+}
+
+.onboarding-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.back-btn, .continue-btn {
+  padding: 1rem 2rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.back-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.back-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.continue-btn {
+  background: #ff6b6b;
+  color: white;
+  min-width: 150px;
+}
+
+.continue-btn:hover {
+  background: #ff5252;
+  transform: translateY(-2px);
+}
+
+.progress-indicator {
+  font-size: 1.2rem;
+  opacity: 0.8;
+} 
